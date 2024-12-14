@@ -2,10 +2,11 @@ package main
 
 import (
 	"bufio"
-	//"fmt"
+	"fmt"
 	"log"
 	"math"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -119,6 +120,187 @@ func GetNumOfSafeReports(filename string) int {
 		if ok {
 			safeReports++
 		}
+	}
+	return safeReports
+}
+
+// --- Part Two ---
+// The engineers are surprised by the low number of safe reports until they realize they forgot to tell you about the Problem Dampener.
+
+// The Problem Dampener is a reactor-mounted module that lets the reactor safety systems tolerate a single bad level in what would otherwise be a safe report. It's like the bad level never happened!
+
+// Now, the same rules apply as before, except if removing a single level from an unsafe report would make it safe, the report instead counts as safe.
+
+// More of the above example's reports are now safe:
+
+// 7 6 4 2 1: Safe without removing any level.
+// 1 2 7 8 9: Unsafe regardless of which level is removed.
+// 9 7 6 2 1: Unsafe regardless of which level is removed.
+// 1 3 2 4 5: Safe by removing the second level, 3.
+// 8 6 4 4 1: Safe by removing the third level, 4.
+// 1 3 6 7 9: Safe without removing any level.
+// Thanks to the Problem Dampener, 4 reports are actually safe!
+
+// Update your analysis by handling situations where the Problem Dampener can remove a single level from unsafe reports. How many reports are now safe?
+
+func validateList(s1 []string) ([]int, bool) {
+	var errIdx []int
+	var vectorUnic []string
+	var vectorAsc []bool
+	var vectorDes []bool
+	var vectorDiff []int
+	for i := range s1 {
+		if !slices.Contains(vectorUnic, s1[i]) {
+			vectorUnic = append(vectorUnic, s1[i])
+		}
+		if i == len(s1)-1 {
+			continue
+		}
+		left, _ := strconv.Atoi(s1[i])
+		right, _ := strconv.Atoi(s1[i+1])
+		vectorAsc = append(vectorAsc, (right > left && left+3 >= right))
+		vectorDes = append(vectorDes, (left > right && left-3 <= right))
+		vectorDiff = append(vectorDiff, (left - right))
+
+	}
+	if len(s1)-len(vectorUnic) > 1 {
+		return errIdx, false
+	}
+	isDsc := false
+	numOfNeg := 0
+	numOfPos := 0
+	numOfZeros := 0
+	for _, e := range vectorDiff {
+		if e > 0 {
+			numOfPos++
+		} else if e < 0 {
+			numOfNeg++
+		} else {
+			numOfZeros++
+		}
+	}
+	if numOfZeros > 1 || numOfPos == numOfNeg {
+		return errIdx, false
+	}
+
+	if numOfPos > 2 {
+		isDsc = true
+	}
+
+	if isDsc {
+		if numOfZeros > 0 && numOfNeg > 0 {
+			return errIdx, false
+		}
+		for idx, b := range vectorDes {
+			if !b {
+				errIdx = append(errIdx, idx)
+			}
+		}
+		if len(errIdx) == 0 {
+			return errIdx, true
+		} else if len(errIdx) == 1 {
+			if errIdx[0] == 0 {
+				return errIdx, true
+			}
+			nextIndex := errIdx[0] + 2
+			if nextIndex < len(s1) {
+				left, _ := strconv.Atoi(s1[errIdx[0]])
+				right, _ := strconv.Atoi(s1[nextIndex])
+				if left > right && left-3 <= right {
+					return errIdx, true
+				} else {
+					return errIdx, false
+				}
+			} else {
+				return errIdx, true
+			}
+		} else if len(errIdx) > 2 {
+			return errIdx, false
+		}
+
+	} else {
+		if numOfZeros > 0 && numOfPos > 0 {
+			return errIdx, false
+		}
+		for idx, b := range vectorAsc {
+			if !b {
+				errIdx = append(errIdx, idx)
+			}
+		}
+		if len(errIdx) == 0 {
+			return errIdx, true
+		} else if len(errIdx) == 1 {
+			nextIndex := errIdx[0] + 2
+			if nextIndex < len(s1) {
+				left, _ := strconv.Atoi(s1[errIdx[0]])
+				right, _ := strconv.Atoi(s1[nextIndex])
+				if right > left && left+3 >= right {
+					return errIdx, true
+				} else {
+					return errIdx, false
+				}
+
+			} else {
+				return errIdx, true
+			}
+		} else if len(errIdx) > 2 {
+			return errIdx, false
+		} else {
+			if errIdx[1]-errIdx[0] == 1 {
+				return errIdx, true
+			} else {
+				return errIdx, false
+			}
+
+		}
+
+	}
+	return errIdx, false
+
+}
+
+func GetNumOfSafeReportDampenerSlice(s1 []string) int {
+	originalS1 := make([]string, len(s1))
+	_ = copy(originalS1, s1)
+	fmt.Println("------------------------------------------------------------------------------------")
+	_, ok := validateList(s1)
+	if ok {
+		fmt.Printf("s1: %v\n", originalS1)
+		fmt.Println("-- GOOD REPORT --")
+		return 1
+	} else {
+		fmt.Printf("s1: %v\n", originalS1)
+		fmt.Println("-- BAD REPORT --")
+		return 0
+	}
+
+}
+
+func GetNumOfSafeReportsDampener(filename string) int {
+	// structure to store input
+	var reportData [][]string
+
+	// read file
+	f, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("unable to read file: %v", err)
+	}
+	defer f.Close()
+	var line string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line = scanner.Text()
+		result := strings.Split(line, " ")
+		//		fmt.Println("Result:", result)
+		reportData = append(reportData, result)
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	safeReports := 0
+	for /*i*/ _, s1 := range reportData {
+		safeReports += GetNumOfSafeReportDampenerSlice(s1)
 	}
 	return safeReports
 }
