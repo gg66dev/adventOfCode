@@ -121,6 +121,7 @@ func GetNumOfSafeReports(filename string) int {
 			safeReports++
 		}
 	}
+	fmt.Printf("safe reports part I: %v\n", safeReports)
 	return safeReports
 }
 
@@ -143,138 +144,7 @@ func GetNumOfSafeReports(filename string) int {
 
 // Update your analysis by handling situations where the Problem Dampener can remove a single level from unsafe reports. How many reports are now safe?
 
-func validateList(s1 []string) ([]int, bool) {
-	var errIdx []int
-	var vectorUnic []string
-	var vectorAsc []bool
-	var vectorDes []bool
-	var vectorDiff []int
-	for i := range s1 {
-		if !slices.Contains(vectorUnic, s1[i]) {
-			vectorUnic = append(vectorUnic, s1[i])
-		}
-		if i == len(s1)-1 {
-			continue
-		}
-		left, _ := strconv.Atoi(s1[i])
-		right, _ := strconv.Atoi(s1[i+1])
-		vectorAsc = append(vectorAsc, (right > left && left+3 >= right))
-		vectorDes = append(vectorDes, (left > right && left-3 <= right))
-		vectorDiff = append(vectorDiff, (left - right))
-
-	}
-	if len(s1)-len(vectorUnic) > 1 {
-		return errIdx, false
-	}
-	isDsc := false
-	numOfNeg := 0
-	numOfPos := 0
-	numOfZeros := 0
-	for _, e := range vectorDiff {
-		if e > 0 {
-			numOfPos++
-		} else if e < 0 {
-			numOfNeg++
-		} else {
-			numOfZeros++
-		}
-	}
-	if numOfZeros > 1 || numOfPos == numOfNeg {
-		return errIdx, false
-	}
-
-	if numOfPos > 2 {
-		isDsc = true
-	}
-
-	if isDsc {
-		if numOfZeros > 0 && numOfNeg > 0 {
-			return errIdx, false
-		}
-		for idx, b := range vectorDes {
-			if !b {
-				errIdx = append(errIdx, idx)
-			}
-		}
-		if len(errIdx) == 0 {
-			return errIdx, true
-		} else if len(errIdx) == 1 {
-			if errIdx[0] == 0 {
-				return errIdx, true
-			}
-			nextIndex := errIdx[0] + 2
-			if nextIndex < len(s1) {
-				left, _ := strconv.Atoi(s1[errIdx[0]])
-				right, _ := strconv.Atoi(s1[nextIndex])
-				if left > right && left-3 <= right {
-					return errIdx, true
-				} else {
-					return errIdx, false
-				}
-			} else {
-				return errIdx, true
-			}
-		} else if len(errIdx) > 2 {
-			return errIdx, false
-		}
-
-	} else {
-		if numOfZeros > 0 && numOfPos > 0 {
-			return errIdx, false
-		}
-		for idx, b := range vectorAsc {
-			if !b {
-				errIdx = append(errIdx, idx)
-			}
-		}
-		if len(errIdx) == 0 {
-			return errIdx, true
-		} else if len(errIdx) == 1 {
-			nextIndex := errIdx[0] + 2
-			if nextIndex < len(s1) {
-				left, _ := strconv.Atoi(s1[errIdx[0]])
-				right, _ := strconv.Atoi(s1[nextIndex])
-				if right > left && left+3 >= right {
-					return errIdx, true
-				} else {
-					return errIdx, false
-				}
-
-			} else {
-				return errIdx, true
-			}
-		} else if len(errIdx) > 2 {
-			return errIdx, false
-		} else {
-			if errIdx[1]-errIdx[0] == 1 {
-				return errIdx, true
-			} else {
-				return errIdx, false
-			}
-
-		}
-
-	}
-	return errIdx, false
-
-}
-
-func GetNumOfSafeReportDampenerSlice(s1 []string) int {
-	originalS1 := make([]string, len(s1))
-	_ = copy(originalS1, s1)
-	fmt.Println("------------------------------------------------------------------------------------")
-	_, ok := validateList(s1)
-	if ok {
-		fmt.Printf("s1: %v\n", originalS1)
-		fmt.Println("-- GOOD REPORT --")
-		return 1
-	} else {
-		fmt.Printf("s1: %v\n", originalS1)
-		fmt.Println("-- BAD REPORT --")
-		return 0
-	}
-
-}
+// reports no error in all levels
 
 func GetNumOfSafeReportsDampener(filename string) int {
 	// structure to store input
@@ -298,9 +168,254 @@ func GetNumOfSafeReportsDampener(filename string) int {
 		log.Fatal(err)
 	}
 
-	safeReports := 0
+	//safeReports := 0
+	var okDirect [][]string
+	var twoDouble [][]string
+	var badIncrease [][]string
+	var badDecrease [][]string
+	var badDirection [][]string
 	for /*i*/ _, s1 := range reportData {
-		safeReports += GetNumOfSafeReportDampenerSlice(s1)
+		processReports(
+			s1,
+			&okDirect,
+			&twoDouble,
+			&badIncrease,
+			&badDecrease,
+			&badDirection,
+		)
 	}
+	var goodIncreaseIgnoring1Lvl [][]string
+	var badIncreaseIgnoring1Lvl [][]string
+	increaseIgnoring1Lvl(
+		badIncrease,
+		&goodIncreaseIgnoring1Lvl,
+		&badIncreaseIgnoring1Lvl,
+	)
+	var goodDecreaseIgnoring1Lvl [][]string
+	var badDecreaseIgnoring1Lvl [][]string
+	decreaseIgnoring1Lvl(
+		badDecrease,
+		&goodDecreaseIgnoring1Lvl,
+		&badDecreaseIgnoring1Lvl,
+	)
+	//fmt.Println("+++++++++ Print Ok Direct +++++++++++++")
+	//for _, s1 := range okDirect {
+	//	fmt.Printf("%v\n", s1)
+	//}
+	//fmt.Println("+++++++++ +++++++++++++++ +++++++++++++")
+	//fmt.Println("+++++++++ Print Two Double +++++++++++++")
+	//for _, s1 := range twoDouble {
+	//	fmt.Printf("%v\n", s1)
+	//}
+	//fmt.Println("+++++++++ +++++++++++++++ +++++++++++++")
+	//fmt.Println("+++++++++ Print Bad Increase +++++++++++++")
+	//for _, s1 := range badIncrease {
+	//	fmt.Printf("%v\n", s1)
+	//}
+	//fmt.Println("+++++++++ +++++++++++++++ +++++++++++++")
+	//fmt.Println("+++++++++ Print Bad Decrease +++++++++++++")
+	//for _, s1 := range badDecrease {
+	//	fmt.Printf("%v\n", s1)
+	//}
+	//fmt.Println("+++++++++ +++++++++++++++ +++++++++++++")
+	//fmt.Println("+++++++++ Print Bad Direction +++++++++++++")
+	//for _, s1 := range badDirection {
+	//	fmt.Printf("%v\n", s1)
+	//}
+	//fmt.Println("+++++++++ +++++++++++++++ +++++++++++++")
+	//fmt.Println("+++++++++ Print Bad Increase ignoring 1 lvl +++++++++++++")
+	//for _, s1 := range badIncreaseIgnoring1Lvl {
+	//	fmt.Printf("%v\n", s1)
+	//}
+	//fmt.Println("+++++++++ +++++++++++++++ +++++++++++++")
+	//fmt.Println("+++++++++ Print Good Increase ignoring 1 lvl +++++++++++++")
+	//for _, s1 := range goodIncreaseIgnoring1Lvl {
+	//	fmt.Printf("%v\n", s1)
+	//}
+	//fmt.Println("+++++++++ +++++++++++++++ +++++++++++++")
+	//fmt.Println("+++++++++ Print Bad Decrease ignoring 1 lvl +++++++++++++")
+	//for _, s1 := range badDecreaseIgnoring1Lvl {
+	//	fmt.Printf("%v\n", s1)
+	//}
+	//fmt.Println("+++++++++ +++++++++++++++ +++++++++++++")
+	//fmt.Println("+++++++++ Print Good Decrease ignoring 1 lvl +++++++++++++")
+	//for _, s1 := range goodDecreaseIgnoring1Lvl {
+	//	fmt.Printf("%v\n", s1)
+	//}
+	//fmt.Println("+++++++++ +++++++++++++++ +++++++++++++")
+
+	//fmt.Printf("total input: %v\n", len(reportData))
+	//fmt.Printf("total process: %v\n", (len(okDirect) + len(twoDouble) + len(badIncrease) + len(badDecrease) + len(badDirection)))
+	//fmt.Println("------------------------------------")
+	//fmt.Printf("total directOK: %v\n", len(okDirect))
+	//fmt.Printf("total twoDouble: %v\n", len(twoDouble))
+	//fmt.Printf("total badDirection: %v\n", len(badDirection))
+	//fmt.Println("------------------------------------")
+	//fmt.Printf("total badIncrease: %v\n", len(badIncrease))
+	//fmt.Printf("> total badIncreaseIgnoring1Lvl: %v\n", len(badIncreaseIgnoring1Lvl))
+	//fmt.Printf("> total goodIncreaseIgnoring1Lvl: %v\n", len(goodIncreaseIgnoring1Lvl))
+	//fmt.Println("------------------------------------")
+	//fmt.Printf("total badDecrease: %v\n", len(badDecrease))
+	//fmt.Printf("> total badDecreaseIgnoring1Lvl: %v\n", len(badDecreaseIgnoring1Lvl))
+	//fmt.Printf("> total goodDecreaseIgnoring1Lvl: %v\n", len(goodDecreaseIgnoring1Lvl))
+	//fmt.Println("------------------------------------")
+	safeReports := len(okDirect) + len(goodIncreaseIgnoring1Lvl) + len(goodDecreaseIgnoring1Lvl)
+	fmt.Printf("safe reports part II: %v\n", safeReports)
 	return safeReports
+}
+
+func processReports(
+	s1 []string,
+	okDirect *[][]string,
+	twoDouble *[][]string,
+	badIncrease *[][]string,
+	badDecrease *[][]string,
+	badDirection *[][]string,
+) {
+	var vectorUnic []string
+	var vectorAsc []bool
+	var vectorDes []bool
+	var vectorDiff []int
+	for i := range s1 {
+		if !slices.Contains(vectorUnic, s1[i]) {
+			vectorUnic = append(vectorUnic, s1[i])
+		}
+		if i == len(s1)-1 {
+			continue
+		}
+		left, _ := strconv.Atoi(s1[i])
+		right, _ := strconv.Atoi(s1[i+1])
+		vectorAsc = append(vectorAsc, (right > left && left+3 >= right))
+		vectorDes = append(vectorDes, (left > right && left-3 <= right))
+		vectorDiff = append(vectorDiff, (left - right))
+
+	}
+	if len(s1)-len(vectorUnic) > 1 {
+		*twoDouble = append(*twoDouble, s1)
+		return
+	}
+	isDsc := false
+	numOfNeg := 0
+	numOfPos := 0
+	numOfZeros := 0
+	for _, e := range vectorDiff {
+		if e > 0 {
+			numOfPos++
+		} else if e < 0 {
+			numOfNeg++
+		} else {
+			numOfZeros++
+		}
+	}
+	if numOfPos == numOfNeg {
+		*badDirection = append(*badDirection, s1)
+		return
+	}
+
+	if numOfPos > 2 {
+		isDsc = true
+	}
+	var errIdx []int
+	if isDsc {
+		for idx, b := range vectorDes {
+			if !b {
+				errIdx = append(errIdx, idx)
+			}
+		}
+		if len(errIdx) == 0 {
+			*okDirect = append(*okDirect, s1)
+			return
+		} else {
+			*badDecrease = append(*badDecrease, s1)
+		}
+	} else {
+		for idx, b := range vectorAsc {
+			if !b {
+				errIdx = append(errIdx, idx)
+			}
+		}
+		if len(errIdx) == 0 {
+			*okDirect = append(*okDirect, s1)
+			return
+		} else {
+			*badIncrease = append(*badIncrease, s1)
+		}
+
+	}
+
+}
+
+func increaseIgnoring1Lvl(
+	badIncrease [][]string,
+	goodIncreaseIgnoring1Lvl *[][]string,
+	badIncreaseIgnoring1Lvl *[][]string,
+) {
+	for _, s2 := range badIncrease {
+		numBads := 0
+		for i := 0; i < len(s2); i++ {
+			if i == len(s2)-1 {
+				continue
+			}
+			left, _ := strconv.Atoi(s2[i])
+			right, _ := strconv.Atoi(s2[i+1])
+			if right == left || right < left || left+3 < right {
+				numBads++
+				if i == len(s2)-2 {
+					break
+				}
+				nextRight, _ := strconv.Atoi(s2[i+2])
+				if nextRight == left || nextRight < left || left+3 < nextRight {
+					if i != 0 {
+						numBads++
+					}
+				} else {
+					i++
+				}
+
+			}
+		}
+		if numBads == 1 {
+			*goodIncreaseIgnoring1Lvl = append(*goodIncreaseIgnoring1Lvl, s2)
+		} else {
+			*badIncreaseIgnoring1Lvl = append(*badIncreaseIgnoring1Lvl, s2)
+		}
+	}
+
+}
+
+func decreaseIgnoring1Lvl(
+	badDecrease [][]string,
+	goodDecreaseIgnoring1Lvl *[][]string,
+	badDecreaseIgnoring1Lvl *[][]string,
+) {
+	for _, s2 := range badDecrease {
+		numBads := 0
+		for i := 0; i < len(s2); i++ {
+			if i == len(s2)-1 {
+				continue
+			}
+			left, _ := strconv.Atoi(s2[i])
+			right, _ := strconv.Atoi(s2[i+1])
+			if right == left || right > left || left-3 > right {
+				numBads++
+				if i == len(s2)-2 {
+					break
+				}
+				nextRight, _ := strconv.Atoi(s2[i+2])
+				if nextRight == left || nextRight > left || left-3 > nextRight {
+					if i != 0 {
+						numBads++
+					}
+				} else {
+					i++
+				}
+			}
+		}
+		if numBads == 1 {
+			*goodDecreaseIgnoring1Lvl = append(*goodDecreaseIgnoring1Lvl, s2)
+		} else {
+			*badDecreaseIgnoring1Lvl = append(*badDecreaseIgnoring1Lvl, s2)
+		}
+	}
+
 }
